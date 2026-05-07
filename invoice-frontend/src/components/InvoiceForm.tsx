@@ -66,7 +66,7 @@ export default function InvoiceForm() {
     }
   };
 
-  const addLine = () => setLines(prev => [...prev, emptyLine()]);
+  const addLine = () => setLines(prev => [emptyLine(), ...prev]);
 
   const removeLine = (index: number) => {
     setLines(prev => prev.filter((_, i) => i !== index));
