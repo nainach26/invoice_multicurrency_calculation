@@ -9,7 +9,7 @@ import InvoiceFormView from './InvoiceFormView';
 export type { InvoiceLine, FormErrors };
 export { CURRENCIES };
 
-function validate(date: Dayjs | null, lines: InvoiceLine[]): FormErrors | null {
+export function validate(date: Dayjs | null, lines: InvoiceLine[]): FormErrors | null {
   const errors: FormErrors = { lines: lines.map(() => ({})) };
   let hasError = false;
 
@@ -42,7 +42,7 @@ function validate(date: Dayjs | null, lines: InvoiceLine[]): FormErrors | null {
 
 export default function InvoiceForm() {
   const [date, setDate] = useState<Dayjs | null>(null);
-  const [baseCurrency, setBaseCurrency] = useState('NZD');
+  const [baseCurrency, setBaseCurrency] = useState('AUD');
   const [lines, setLines] = useState<InvoiceLine[]>([emptyLine()]);
   const [fieldErrors, setFieldErrors] = useState<FormErrors | null>(null);
   const [total, setTotal] = useState<string | null>(null);
