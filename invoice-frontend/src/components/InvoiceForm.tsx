@@ -13,8 +13,11 @@ function validate(date: Dayjs | null, lines: InvoiceLine[]): FormErrors | null {
   const errors: FormErrors = { lines: lines.map(() => ({})) };
   let hasError = false;
 
-  if (!date || !date.isValid()) {
+  if (!date) {
     errors.date = 'Invoice date is required';
+    hasError = true;
+  } else if (!date.isValid()) {
+    errors.date = 'Invalid date';
     hasError = true;
   } else if (date.isAfter(new Date())) {
     errors.date = 'Invoice date cannot be in the future';
@@ -22,10 +25,15 @@ function validate(date: Dayjs | null, lines: InvoiceLine[]): FormErrors | null {
   }
 
   lines.forEach((line, i) => {
-    const amount = parseFloat(line.amount);
-    if (!line.amount || isNaN(amount) || amount <= 0) {
-      errors.lines[i].amount = 'Must be a positive number';
+    if (!line.amount) {
+      errors.lines[i].amount = 'Enter amount';
       hasError = true;
+    } else {
+      const amount = parseFloat(line.amount);
+      if (isNaN(amount) || amount <= 0) {
+        errors.lines[i].amount = 'Must be a positive number';
+        hasError = true;
+      }
     }
   });
 
