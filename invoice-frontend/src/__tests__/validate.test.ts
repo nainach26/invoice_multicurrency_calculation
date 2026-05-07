@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { validate } from '../components/InvoiceForm';
-import { InvoiceLine } from '../types/invoice';
+import { InvoiceLine, } from '../types/invoice';
+import { MAX_AMOUNT } from '../constants/invoice';
 
 const line = (amount: string, currency = 'NZD'): InvoiceLine => ({
   id: 'test-id',
@@ -72,6 +73,22 @@ describe('validate — amount', () => {
 
   test('decimal amount is accepted', () => {
     const result = validate(pastDate, [line('99.99')]);
+    expect(result?.lines[0].amount).toBeUndefined();
+  });
+
+  test('amount exceeding MAX_AMOUNT returns error', () => {
+    const result = validate(pastDate, [line(String(MAX_AMOUNT + 1))]);
+    expect(result?.lines[0].amount).toContain('cannot exceed');
+    expect(result?.lines[0].amount).toContain('1,000,000,000');
+  });
+
+  test('amount exactly at MAX_AMOUNT is accepted', () => {
+    const result = validate(pastDate, [line(String(MAX_AMOUNT))]);
+    expect(result?.lines[0].amount).toBeUndefined();
+  });
+
+  test('amount just below MAX_AMOUNT is accepted', () => {
+    const result = validate(pastDate, [line(String(MAX_AMOUNT - 1))]);
     expect(result?.lines[0].amount).toBeUndefined();
   });
 });

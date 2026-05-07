@@ -37,6 +37,9 @@ public class InvoiceService {
     @ConfigProperty(name = "invoice.max-lines", defaultValue = "25")
     int maxLines;
 
+    @ConfigProperty(name = "invoice.max-amount", defaultValue = "1000000000")
+    java.math.BigDecimal maxAmount;
+
     @Inject
     ObjectMapper objectMapper;
 
@@ -59,6 +62,13 @@ public class InvoiceService {
         if (invoice.getLines().size() > maxLines) {
             throw new IllegalArgumentException(
                     "Invoice cannot have more than " + maxLines + " line items");
+        }
+
+        for (InvoiceLine line : invoice.getLines()) {
+            if (line.getAmount().compareTo(maxAmount) > 0) {
+                throw new IllegalArgumentException(
+                        "Line amount cannot exceed " + maxAmount.toPlainString());
+            }
         }
 
         BigDecimal total = BigDecimal.ZERO;

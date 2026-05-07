@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Dayjs } from 'dayjs';
 import { InvoiceLine, FormErrors } from '../types/invoice';
-import { CURRENCIES, emptyLine } from '../constants/invoice';
+import { CURRENCIES, emptyLine, MAX_AMOUNT } from '../constants/invoice';
 import InvoiceFormView from './InvoiceFormView';
 
 export type { InvoiceLine, FormErrors };
@@ -32,6 +32,9 @@ export function validate(date: Dayjs | null, lines: InvoiceLine[]): FormErrors |
       const amount = parseFloat(line.amount);
       if (isNaN(amount) || amount <= 0) {
         errors.lines[i].amount = 'Must be a positive number';
+        hasError = true;
+      } else if (amount > MAX_AMOUNT) {
+        errors.lines[i].amount = `Amount cannot exceed ${MAX_AMOUNT.toLocaleString()}`;
         hasError = true;
       }
     }

@@ -114,6 +114,49 @@ class InvoiceServiceTest {
         assertEquals(new BigDecimal("10000000.00"), result);
     }
 
+    // ── Max Amount Validation ─────────────────────────────────────────────────
+
+    @Test
+    void amountExceedsMaxAmount_throwsIllegalArgumentException() {
+        Invoice invoice = invoice("NZD", "2024-01-15",
+                line("NZD", "1000000001"));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> invoiceService.calculateTotal(invoice));
+
+        assertTrue(ex.getMessage().contains("cannot exceed"));
+    }
+
+    @Test
+    void amountExactlyAtMaxAmount_isAccepted() throws Exception {
+        Invoice invoice = invoice("NZD", "2024-01-15",
+                line("NZD", "1000000000"));
+
+        BigDecimal result = invoiceService.calculateTotal(invoice);
+
+        assertEquals(new BigDecimal("1000000000.00"), result);
+    }
+
+    @Test
+    void amountJustBelowMaxAmount_isAccepted() throws Exception {
+        Invoice invoice = invoice("NZD", "2024-01-15",
+                line("NZD", "999999999.99"));
+
+        BigDecimal result = invoiceService.calculateTotal(invoice);
+
+        assertEquals(new BigDecimal("999999999.99"), result);
+    }
+
+    @Test
+    void multipleLines_oneExceedsMaxAmount_throwsIllegalArgumentException() {
+        Invoice invoice = invoice("NZD", "2024-01-15",
+                line("NZD", "100.00"),
+                line("NZD", "1000000001.00"));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> invoiceService.calculateTotal(invoice));
+    }
+
     // ── Max Lines Validation ─────────────────────────────────────────────────
 
     @Test

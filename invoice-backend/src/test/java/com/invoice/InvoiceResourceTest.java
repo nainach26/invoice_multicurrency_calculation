@@ -265,6 +265,30 @@ class InvoiceResourceTest {
     // ── Service Error Mapping ────────────────────────────────────────────────
 
     @Test
+    void amountExceedsLimit_returns400WithMessage() throws Exception {
+        Mockito.when(invoiceService.calculateTotal(Mockito.any()))
+                .thenThrow(new IllegalArgumentException("Line amount cannot exceed 1000000000"));
+
+        given()
+            .header("X-API-Key", API_KEY)
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "invoice": {
+                    "currency": "NZD",
+                    "date": "2024-01-15",
+                    "lines": [{ "currency": "NZD", "amount": 1000000001 }]
+                  }
+                }
+                """)
+        .when()
+            .post("/invoice/total")
+        .then()
+            .statusCode(400)
+            .body(containsString("cannot exceed"));
+    }
+
+    @Test
     void tooManyLines_returns400WithMessage() throws Exception {
         Mockito.when(invoiceService.calculateTotal(Mockito.any()))
                 .thenThrow(new IllegalArgumentException("Invoice cannot have more than 25 line items"));
