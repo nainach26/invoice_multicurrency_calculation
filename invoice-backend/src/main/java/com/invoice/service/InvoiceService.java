@@ -101,6 +101,9 @@ public class InvoiceService {
                 return fetchExchangeRate(date, from, to);
             } catch (ExchangeRateApiException | RateNotFoundException e) {
                 throw e;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
             } catch (IOException e) {
                 log.warnf("Attempt %d/%d failed fetching rate %s -> %s: %s", attempt, MAX_RETRIES, from, to, e.getMessage());
                 lastIoException = e;
