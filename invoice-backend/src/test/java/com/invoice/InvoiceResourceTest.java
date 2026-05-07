@@ -91,7 +91,31 @@ class InvoiceResourceTest {
             .post("/invoice/total")
         .then()
             .statusCode(400)
-            .body(containsString("date"));
+            .body(containsString("Invoice date is required"));
+    }
+
+    @Test
+    void invalidDateFormat_returns400WithMessage() throws Exception {
+        Mockito.when(invoiceService.calculateTotal(Mockito.any()))
+                .thenThrow(new IllegalArgumentException("Invalid invoice date format. Expected YYYY-MM-DD"));
+
+        given()
+            .header("X-API-Key", API_KEY)
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "invoice": {
+                    "currency": "NZD",
+                    "date": "15-01-2024",
+                    "lines": [{ "currency": "NZD", "amount": 100.00 }]
+                  }
+                }
+                """)
+        .when()
+            .post("/invoice/total")
+        .then()
+            .statusCode(400)
+            .body(containsString("YYYY-MM-DD"));
     }
 
     @Test
@@ -156,7 +180,7 @@ class InvoiceResourceTest {
     }
 
     @Test
-    void negativeAmount_returns400() {
+    void negativeAmount_returns400WithMessage() {
         given()
             .header("X-API-Key", API_KEY)
             .contentType(ContentType.JSON)
@@ -173,11 +197,11 @@ class InvoiceResourceTest {
             .post("/invoice/total")
         .then()
             .statusCode(400)
-            .body(containsString("positive"));
+            .body(containsString("Invoice line amounts must be positive"));
     }
 
     @Test
-    void zeroAmount_returns400() {
+    void zeroAmount_returns400WithMessage() {
         given()
             .header("X-API-Key", API_KEY)
             .contentType(ContentType.JSON)
@@ -193,7 +217,29 @@ class InvoiceResourceTest {
         .when()
             .post("/invoice/total")
         .then()
-            .statusCode(400);
+            .statusCode(400)
+            .body(containsString("Invoice line amounts must be positive"));
+    }
+
+    @Test
+    void nullAmount_returns400WithMessage() {
+        given()
+            .header("X-API-Key", API_KEY)
+            .contentType(ContentType.JSON)
+            .body("""
+                {
+                  "invoice": {
+                    "currency": "NZD",
+                    "date": "2024-01-15",
+                    "lines": [{ "currency": "NZD" }]
+                  }
+                }
+                """)
+        .when()
+            .post("/invoice/total")
+        .then()
+            .statusCode(400)
+            .body(containsString("Invoice line amounts must be positive"));
     }
 
     @Test
