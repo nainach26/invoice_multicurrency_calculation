@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ../invoice-backend
+    ports:
+      - "8080:8080"
+    environment:
+      INVOICE_API_KEY: ${INVOICE_API_KEY:-dev-secret-key}
+      CORS_ALLOWED_ORIGIN: http://localhost:3000
+
+  frontend:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: http://backend:8080
+      API_KEY: ${INVOICE_API_KEY:-dev-secret-key}
+    depends_on:
+      - backend
