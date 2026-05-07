@@ -10,6 +10,9 @@ import jakarta.ws.rs.ext.Provider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 @Provider
 @Priority(Priorities.AUTHENTICATION)
 public class ApiKeyFilter implements ContainerRequestFilter {
@@ -23,7 +26,9 @@ public class ApiKeyFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext ctx) {
         String provided = ctx.getHeaderString(API_KEY_HEADER);
-        if (provided == null || !provided.equals(expectedApiKey)) {
+        if (provided == null || !MessageDigest.isEqual(
+                provided.getBytes(StandardCharsets.UTF_8),
+                expectedApiKey.getBytes(StandardCharsets.UTF_8))) {
             log.warnf("Rejected request to %s — missing or invalid API key", ctx.getUriInfo().getPath());
             ctx.abortWith(Response.status(Response.Status.UNAUTHORIZED)
                     .entity("Unauthorized")

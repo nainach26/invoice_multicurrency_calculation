@@ -19,15 +19,18 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.HashMap;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class InvoiceService {
 
     private static final Logger log = Logger.getLogger(InvoiceService.class);
     private static final String FRANKFURTER_BASE_URL = "https://api.frankfurter.dev/v2/rates";
+    private static final long CACHE_TTL_MS = Duration.ofHours(1).toMillis();
+    private static final int MAX_RETRIES = 2;
 
     @Inject
     ObjectMapper objectMapper;
@@ -36,31 +39,74 @@ public class InvoiceService {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    private record CacheEntry(BigDecimal rate, long expiresAt) {
+        boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
+    }
+
+    private final ConcurrentHashMap<String, CacheEntry> rateCache = new ConcurrentHashMap<>();
+
     public BigDecimal calculateTotal(Invoice invoice) throws RateNotFoundException, IOException, InterruptedException {
-        BigDecimal total = BigDecimal.ZERO;
         String baseCurrency = invoice.getCurrency();
         String date = invoice.getDate();
-        Map<String, BigDecimal> rateCache = new HashMap<>();
 
+        validateInvoiceDate(date);
+
+        BigDecimal total = BigDecimal.ZERO;
         for (InvoiceLine line : invoice.getLines()) {
             BigDecimal lineAmount = line.getAmount();
 
-            if (line.getCurrency().equalsIgnoreCase(baseCurrency)) {
-                lineAmount = lineAmount.setScale(2, RoundingMode.HALF_UP);
-            } else {
-                String cacheKey = line.getCurrency() + "_" + baseCurrency;
-                BigDecimal rate = rateCache.get(cacheKey);
-                if (rate == null) {
-                    rate = fetchExchangeRate(date, line.getCurrency(), baseCurrency);
-                    rateCache.put(cacheKey, rate);
-                }
+            if (!line.getCurrency().equalsIgnoreCase(baseCurrency)) {
+                BigDecimal rate = getCachedRate(date, line.getCurrency(), baseCurrency);
                 lineAmount = lineAmount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                lineAmount = lineAmount.setScale(2, RoundingMode.HALF_UP);
             }
 
             total = total.add(lineAmount);
         }
 
         return total.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void validateInvoiceDate(String date) {
+        LocalDate invoiceDate;
+        try {
+            invoiceDate = LocalDate.parse(date);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Invalid invoice date format. Expected YYYY-MM-DD");
+        }
+        if (invoiceDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Invoice date cannot be in the future");
+        }
+    }
+
+    private BigDecimal getCachedRate(String date, String from, String to)
+            throws RateNotFoundException, IOException, InterruptedException {
+        String cacheKey = date + "_" + from + "_" + to;
+        CacheEntry entry = rateCache.get(cacheKey);
+        if (entry != null && !entry.isExpired()) {
+            log.debugf("Cache hit for %s -> %s on %s", from, to, date);
+            return entry.rate();
+        }
+        BigDecimal rate = fetchWithRetry(date, from, to);
+        rateCache.put(cacheKey, new CacheEntry(rate, System.currentTimeMillis() + CACHE_TTL_MS));
+        return rate;
+    }
+
+    private BigDecimal fetchWithRetry(String date, String from, String to)
+            throws RateNotFoundException, IOException, InterruptedException {
+        IOException lastIoException = null;
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                return fetchExchangeRate(date, from, to);
+            } catch (ExchangeRateApiException | RateNotFoundException e) {
+                throw e;
+            } catch (IOException e) {
+                log.warnf("Attempt %d/%d failed fetching rate %s -> %s: %s", attempt, MAX_RETRIES, from, to, e.getMessage());
+                lastIoException = e;
+            }
+        }
+        throw lastIoException;
     }
 
     private BigDecimal fetchExchangeRate(String date, String from, String to)
@@ -82,7 +128,8 @@ public class InvoiceService {
         }
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Frankfurter API returned HTTP " + response.statusCode());
+            throw new ExchangeRateApiException(
+                    "Frankfurter API returned HTTP " + response.statusCode(), response.statusCode());
         }
 
         List<ExchangeRateItem> items = objectMapper.readValue(
