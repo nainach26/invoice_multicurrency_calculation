@@ -9,6 +9,8 @@ import com.invoice.model.InvoiceLine;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
@@ -32,6 +34,9 @@ public class InvoiceService {
     private static final long CACHE_TTL_MS = Duration.ofHours(1).toMillis();
     private static final int MAX_RETRIES = 2;
 
+    @ConfigProperty(name = "invoice.max-lines", defaultValue = "25")
+    int maxLines;
+
     @Inject
     ObjectMapper objectMapper;
 
@@ -50,6 +55,11 @@ public class InvoiceService {
         String date = invoice.getDate();
 
         validateInvoiceDate(date);
+
+        if (invoice.getLines().size() > maxLines) {
+            throw new IllegalArgumentException(
+                    "Invoice cannot have more than " + maxLines + " line items");
+        }
 
         BigDecimal total = BigDecimal.ZERO;
         for (InvoiceLine line : invoice.getLines()) {

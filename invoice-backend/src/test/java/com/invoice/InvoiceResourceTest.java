@@ -265,6 +265,22 @@ class InvoiceResourceTest {
     // ── Service Error Mapping ────────────────────────────────────────────────
 
     @Test
+    void tooManyLines_returns400WithMessage() throws Exception {
+        Mockito.when(invoiceService.calculateTotal(Mockito.any()))
+                .thenThrow(new IllegalArgumentException("Invoice cannot have more than 25 line items"));
+
+        given()
+            .header("X-API-Key", API_KEY)
+            .contentType(ContentType.JSON)
+            .body(VALID_PAYLOAD)
+        .when()
+            .post("/invoice/total")
+        .then()
+            .statusCode(400)
+            .body(containsString("more than 25"));
+    }
+
+    @Test
     void futureDate_returns400WithMessage() throws Exception {
         Mockito.when(invoiceService.calculateTotal(Mockito.any()))
                 .thenThrow(new IllegalArgumentException("Invoice date cannot be in the future"));

@@ -8,8 +8,10 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -112,13 +114,57 @@ class InvoiceServiceTest {
         assertEquals(new BigDecimal("10000000.00"), result);
     }
 
+    // ── Max Lines Validation ─────────────────────────────────────────────────
+
+    @Test
+    void exceedsMaxLines_throwsIllegalArgumentException() {
+        List<InvoiceLine> lines = IntStream.range(0, 26)
+                .mapToObj(i -> line("NZD", "10.00"))
+                .collect(java.util.stream.Collectors.toList());
+        Invoice invoice = invoiceWithLines("NZD", "2024-01-15", lines);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> invoiceService.calculateTotal(invoice));
+
+        assertTrue(ex.getMessage().contains("more than"));
+        assertTrue(ex.getMessage().contains("25"));
+    }
+
+    @Test
+    void exactlyMaxLines_isAccepted() throws Exception {
+        List<InvoiceLine> lines = IntStream.range(0, 25)
+                .mapToObj(i -> line("NZD", "10.00"))
+                .collect(java.util.stream.Collectors.toList());
+        Invoice invoice = invoiceWithLines("NZD", "2024-01-15", lines);
+
+        BigDecimal result = invoiceService.calculateTotal(invoice);
+
+        assertEquals(new BigDecimal("250.00"), result);
+    }
+
+    @Test
+    void oneLessThanMaxLines_isAccepted() throws Exception {
+        List<InvoiceLine> lines = IntStream.range(0, 24)
+                .mapToObj(i -> line("NZD", "10.00"))
+                .collect(java.util.stream.Collectors.toList());
+        Invoice invoice = invoiceWithLines("NZD", "2024-01-15", lines);
+
+        BigDecimal result = invoiceService.calculateTotal(invoice);
+
+        assertEquals(new BigDecimal("240.00"), result);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Invoice invoice(String currency, String date, InvoiceLine... lines) {
+        return invoiceWithLines(currency, date, Arrays.asList(lines));
+    }
+
+    private Invoice invoiceWithLines(String currency, String date, List<InvoiceLine> lines) {
         Invoice inv = new Invoice();
         inv.setCurrency(currency);
         inv.setDate(date);
-        inv.setLines(Arrays.asList(lines));
+        inv.setLines(lines);
         return inv;
     }
 
