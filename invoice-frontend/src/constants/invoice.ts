@@ -1,6 +1,6 @@
 import { InvoiceLine } from '../types/invoice';
 
-export const MAX_LINES = 25;
+export const MAX_LINES = parseInt(process.env.NEXT_PUBLIC_MAX_INVOICE_LINES ?? '25', 10);
 
 export const CURRENCIES = [
   'AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR',

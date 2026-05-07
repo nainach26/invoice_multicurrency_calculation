@@ -20,6 +20,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  env: {
+    NEXT_PUBLIC_MAX_INVOICE_LINES: process.env.MAX_INVOICE_LINES ?? '25',
+  },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },

@@ -4,6 +4,8 @@ COPY package*.json ./
 RUN npm ci
 
 FROM node:20-alpine AS builder
+ARG MAX_INVOICE_LINES=25
+ENV MAX_INVOICE_LINES=${MAX_INVOICE_LINES}
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

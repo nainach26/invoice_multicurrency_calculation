@@ -14,7 +14,10 @@ services:
       start_period: 30s
 
   frontend:
-    build: .
+    build:
+      context: .
+      args:
+        MAX_INVOICE_LINES: ${MAX_INVOICE_LINES:-25}
     ports:
       - "3000:3000"
     environment:
