@@ -1,5 +1,7 @@
 import { InvoiceLine } from '../types/invoice';
 
+export const MAX_LINES = 25;
+
 export const CURRENCIES = [
   'AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR',
   'GBP', 'HKD', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW',

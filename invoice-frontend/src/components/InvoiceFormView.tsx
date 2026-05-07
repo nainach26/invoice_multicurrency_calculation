@@ -15,7 +15,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { InvoiceLine, FormErrors } from '../types/invoice';
-import { CURRENCIES } from '../constants/invoice';
+import { CURRENCIES, MAX_LINES } from '../constants/invoice';
 
 interface Props {
   date: Dayjs | null;
@@ -78,8 +78,14 @@ export default function InvoiceFormView({
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>Invoice Lines</Typography>
-        <Button startIcon={<AddIcon />} size="small" onClick={onAddLine} variant="outlined">
-          Add Line
+        <Button
+          startIcon={<AddIcon />}
+          size="small"
+          onClick={onAddLine}
+          variant="outlined"
+          disabled={lines.length >= MAX_LINES}
+        >
+          Add Line {lines.length >= MAX_LINES ? `(max ${MAX_LINES})` : ''}
         </Button>
       </Box>
 
